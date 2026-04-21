@@ -1,35 +1,102 @@
 {% extends "base.html" %}
-{% block title %}RoyAI · 운영 대시보드{% endblock %}
+{% block title %}RoyAI 대시보드{% endblock %}
 {% block body %}
 <header class="royai-topbar">
-  <div class="royai-brand">RoyAI <span class="royai-sub">다이닝 자동화 MVP</span></div>
+  <div class="royai-brand">RoyAI <span class="royai-sub">1단계 주문 MVP</span></div>
   <nav class="royai-nav">
     <a href="/kitchen">주방</a>
-    <a href="/admin">관제</a>
+    <a href="/admin">관리</a>
   </nav>
 </header>
+
 <main class="royai-main">
-  <h1 class="royai-h1">룸 현황</h1>
-  <p class="royai-lead">룸 화면은 <code class="royai-code">/room/&lt;id&gt;</code> 또는 <code class="royai-code">/?room=room1</code></p>
-  <div id="room-cards" class="royai-grid"></div>
+  <section class="royai-panel">
+    <h1 class="royai-h1">실시간 주문 대시보드</h1>
+    <p class="royai-lead">룸 화면에서 음성 주문이 들어오면 아래 목록이 자동으로 갱신됩니다.</p>
+    <div id="summary" class="royai-meta">불러오는 중...</div>
+  </section>
+
+  <section>
+    <h2 class="royai-h2">룸 상태</h2>
+    <div id="room-cards" class="royai-grid"></div>
+  </section>
+
+  <section style="margin-top: 2rem;">
+    <h2 class="royai-h2">최신 주문</h2>
+    <ul id="orders" class="royai-log"></ul>
+  </section>
 </main>
+{% endblock %}
+
+{% block scripts %}
 <script>
-async function load() {
-  const r = await fetch('/api/rooms');
-  const j = await r.json();
+const socket = io({ transports: ['websocket', 'polling'] });
+socket.on('connect', () => socket.emit('join_admin'));
+
+function money(value) {
+  return new Intl.NumberFormat('ko-KR').format(value || 0) + '원';
+}
+
+function renderRooms(rooms) {
   const el = document.getElementById('room-cards');
-  el.innerHTML = j.rooms.map(room => `
+  el.innerHTML = rooms.map((room) => `
     <article class="royai-card">
       <div class="royai-card__head">
         <h2>${room.display_name}</h2>
-        <span class="royai-pill royai-pill--${room.is_occupied ? 'on' : 'off'}">${room.is_occupied ? '사용중' : '비어있음'}</span>
+        <span class="royai-pill royai-pill--${room.is_occupied ? 'on' : 'off'}">
+          ${room.is_occupied ? '사용 중' : '대기'}
+        </span>
       </div>
-      <p class="royai-meta">상태 · <strong>${room.status}</strong></p>
-      <a class="royai-btn" href="/room/${room.id}">룸 화면</a>
+      <p class="royai-meta">상태: <strong>${room.status}</strong></p>
+      <a class="royai-btn" href="/room/${room.id}">룸 열기</a>
     </article>
   `).join('');
 }
-load();
-setInterval(load, 8000);
+
+function renderOrders(orders) {
+  const el = document.getElementById('orders');
+  if (!orders.length) {
+    el.innerHTML = '<li>아직 주문이 없습니다.</li>';
+    return;
+  }
+
+  el.innerHTML = orders.map((order) => {
+    const items = (order.items || []).map((item) => `${item.name_snapshot} x${item.qty}`).join(', ');
+    return `
+      <li>
+        <strong>#${order.id}</strong> ${order.room_id}
+        <span class="royai-tag">${order.source}</span>
+        <span class="royai-tag">${order.status}</span>
+        ${items}
+        <span class="royai-muted">${money(order.total_amount)}</span>
+      </li>
+    `;
+  }).join('');
+}
+
+async function refreshDashboard() {
+  const [roomsRes, ordersRes] = await Promise.all([
+    fetch('/api/rooms'),
+    fetch('/api/orders'),
+  ]);
+
+  const roomsData = await roomsRes.json();
+  const ordersData = await ordersRes.json();
+  const rooms = roomsData.rooms || [];
+  const orders = ordersData.orders || [];
+
+  renderRooms(rooms);
+  renderOrders(orders.slice(0, 20));
+
+  document.getElementById('summary').textContent =
+    `룸 ${rooms.length}개, 주문 ${orders.length}건`;
+}
+
+socket.on('order_created', refreshDashboard);
+socket.on('order_updated', refreshDashboard);
+socket.on('service_request_created', refreshDashboard);
+
+refreshDashboard();
+setInterval(refreshDashboard, 8000);
 </script>
 {% endblock %}

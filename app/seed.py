@@ -1,4 +1,4 @@
-"""초기 룸·메뉴 시드."""
+"""Initial room and menu seed data for the MVP."""
 from __future__ import annotations
 
 from app.extensions import db
@@ -16,40 +16,40 @@ def seed_if_empty() -> None:
         ("room3", "room3", "룸 3"),
         ("room4", "room4", "룸 4"),
         ("room5", "room5", "VIP 룸"),
-        ("room6", "room6", "홀 테이블 A"),
+        ("room6", "room6", "단체 테이블 A"),
     ]
-    for rid, name, disp in rooms:
+    for room_id, name, display_name in rooms:
         db.session.add(
             Room(
-                id=rid,
+                id=room_id,
                 name=name,
-                display_name=disp,
+                display_name=display_name,
                 status="idle",
                 is_occupied=False,
             )
         )
 
     menus: list[tuple[str, str, int, str, int]] = [
-        ("한돈 생삼겹", "국내산 한돈 생삼겹 150g", 18000, "메인", 10),
-        ("한돈 목살", "한돈 목살 구이", 17000, "메인", 20),
-        ("된장찌개", "집 된장 베이스", 8000, "식사", 30),
-        ("김치찌개", "묵은지 김치찌개", 9000, "식사", 40),
-        ("공기밥", "현미·백미 선택", 1500, "식사", 50),
-        ("냉면", "육수 냉면", 10000, "식사", 60),
-        ("계란찜", "실온 계란 부드럽게", 6000, "추가", 70),
-        ("소주", "대표 소주", 5000, "주류", 80),
-        ("맥주", "생맥주/캔", 6000, "주류", 90),
-        ("음료수", "탄산·무탄산", 3000, "음료", 100),
+        ("생삼겹살", "국내산 생삼겹살 150g", 18000, "메인", 10),
+        ("생목살", "국내산 생목살 150g", 17000, "메인", 20),
+        ("된장찌개", "구수한 된장찌개", 8000, "식사", 30),
+        ("김치찌개", "진한 김치찌개", 9000, "식사", 40),
+        ("공기밥", "추가 공기밥", 1500, "추가", 50),
+        ("냉면", "식사 냉면", 10000, "식사", 60),
+        ("계란찜", "부드러운 계란찜", 6000, "추가", 70),
+        ("소주", "시원한 소주", 5000, "주류", 80),
+        ("맥주", "생맥주 또는 병맥주", 6000, "주류", 90),
+        ("음료수", "콜라, 사이다 등", 3000, "음료", 100),
     ]
-    for name, desc, price, cat, so in menus:
+    for name, description, price, category, sort_order in menus:
         db.session.add(
             Menu(
                 name=name,
-                description=desc,
+                description=description,
                 price=price,
-                category=cat,
+                category=category,
                 is_active=True,
-                sort_order=so,
+                sort_order=sort_order,
             )
         )
 

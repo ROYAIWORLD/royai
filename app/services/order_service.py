@@ -32,6 +32,10 @@ def create_order(
     session_id: int | None = None,
 ) -> Order:
     total = 0
+    old_room_status = room.status
+    if room.status == "idle":
+        room.status = "ordering"
+    room.is_occupied = True
     order = Order(room_id=room.id, session_id=session_id or room.current_session_id, status="created", source=source)
     db.session.add(order)
     db.session.flush()
@@ -59,6 +63,11 @@ def create_order(
     event_service.log_event(
         "order_created",
         {"order_id": order.id, "room_id": room.id, "total": total},
+        room_id=room.id,
+    )
+    event_service.emit_all_surfaces(
+        "room_status_updated",
+        {"room": room.id, "from": old_room_status, "to": room.status},
         room_id=room.id,
     )
     from app.utils.serialize import order_to_dict

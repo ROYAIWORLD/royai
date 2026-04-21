@@ -25,7 +25,7 @@ def room_query():
 
 @bp.get("/room/<room_id>")
 def room_screen(room_id: str):
-    return render_template("roy_room.html", room_id=room_id)
+    return render_template("room.html", room_id=room_id)
 
 
 @bp.get("/kitchen")
