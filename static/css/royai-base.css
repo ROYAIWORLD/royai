@@ -1,0 +1,490 @@
+:root {
+  --bg0: #0b0d10;
+  --bg1: #12161c;
+  --panel: #161c24;
+  --line: rgba(255, 255, 255, 0.08);
+  --text: #e8ecf1;
+  --muted: #8b95a5;
+  --gold: #c9a962;
+  --gold-dim: rgba(201, 169, 98, 0.35);
+  --ok: #3ecf8e;
+  --warn: #f0c14b;
+  --danger: #e85d5d;
+  --glow: 0 0 40px rgba(201, 169, 98, 0.08);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: "Noto Sans KR", system-ui, -apple-system, sans-serif;
+  background: var(--bg0);
+  color: var(--text);
+}
+
+.royai-body {
+  position: relative;
+}
+
+.royai-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 0%, rgba(201, 169, 98, 0.12), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 20%, rgba(80, 120, 200, 0.08), transparent 50%),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
+  z-index: 0;
+}
+
+.royai-shell {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: 1rem clamp(1rem, 2vw, 2rem) 2.5rem;
+}
+
+.royai-topbar,
+.royai-roombar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.royai-brand {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.royai-sub {
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-left: 0.5rem;
+}
+
+.royai-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  margin-left: 1rem;
+  font-size: 0.9rem;
+}
+
+.royai-nav a:hover {
+  color: var(--gold);
+}
+
+.royai-main {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.royai-h1 {
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-weight: 700;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.royai-h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.royai-lead {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.royai-code {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.royai-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  margin-top: 1rem;
+}
+
+.royai-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  box-shadow: var(--glow);
+}
+
+.royai-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.royai-meta {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.royai-pill {
+  font-size: 0.72rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+
+.royai-pill--on {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+
+.royai-pill--off {
+  color: var(--muted);
+}
+
+.royai-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.75rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--gold-dim);
+  background: linear-gradient(180deg, rgba(201, 169, 98, 0.18), rgba(201, 169, 98, 0.06));
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.royai-btn--ghost {
+  background: transparent;
+  border-color: var(--line);
+}
+
+.royai-btn--small {
+  margin-top: 0;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+}
+
+.royai-room-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* 룸 진입 시 한 번: 화면 터치로 마이크 허용 (브라우저 정책) */
+.royai-voice-prime {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(10, 14, 20, 0.88);
+  backdrop-filter: blur(8px);
+  border-radius: 0 0 1.25rem 1.25rem;
+  cursor: pointer;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.royai-voice-prime--gone {
+  display: none !important;
+}
+
+.royai-voice-prime__inner {
+  max-width: 22rem;
+}
+
+.royai-voice-prime__title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+  color: var(--gold);
+  letter-spacing: -0.03em;
+}
+
+.royai-voice-prime__lead {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
+}
+
+.royai-voice-prime__sub {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.royai-room-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.royai-room-status {
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+
+.royai-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1.1rem;
+  padding: 1rem 1.1rem 1.25rem;
+}
+
+.royai-mic {
+  width: 100%;
+  min-height: 4.5rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  border-radius: 1rem;
+  border: 1px solid var(--gold-dim);
+  background: radial-gradient(circle at 50% 30%, rgba(201, 169, 98, 0.25), rgba(22, 28, 36, 0.9));
+  color: var(--text);
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.royai-mic.royai-mic--on {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 169, 98, 0.35);
+  animation: royai-mic-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes royai-mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(201, 169, 98, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(201, 169, 98, 0.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .royai-mic.royai-mic--on {
+    animation: none;
+  }
+}
+
+.royai-textarea {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  padding: 0.75rem;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.royai-assistant {
+  margin-top: 0.75rem;
+  min-height: 2.5rem;
+  color: var(--gold);
+  line-height: 1.5;
+}
+
+.royai-quick {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.royai-quick button {
+  min-height: 3.25rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.royai-quick button:active {
+  transform: scale(0.98);
+}
+
+.royai-menu-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.royai-muted {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.royai-hint {
+  margin: 0 0 0.65rem;
+  line-height: 1.45;
+  font-size: 0.88rem;
+}
+
+.royai-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.royai-list li {
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.royai-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+  background: rgba(255, 255, 255, 0.06);
+  margin-right: 0.35rem;
+  color: var(--muted);
+}
+
+.royai-kitchen {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .royai-kitchen {
+    grid-template-columns: 1fr;
+  }
+}
+
+.royai-kcol {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 0.75rem;
+  min-height: 200px;
+}
+
+.royai-kcard {
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  padding: 0.65rem;
+  margin-bottom: 0.65rem;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.royai-kcard--new {
+  border-color: rgba(240, 193, 75, 0.45);
+  box-shadow: 0 0 0 1px rgba(240, 193, 75, 0.12);
+}
+
+.royai-kcard__actions button {
+  margin-top: 0.35rem;
+  margin-right: 0.35rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.royai-log {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  padding: 0.75rem 1rem;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.royai-log li {
+  font-size: 0.82rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+
+/* —— 룸: 밝은 테마 (매장 태블릿 가독성) —— */
+body.royai-room-light {
+  --bg0: #eef2f7;
+  --bg1: #e2e8f0;
+  --panel: #ffffff;
+  --line: rgba(15, 23, 42, 0.09);
+  --text: #0f172a;
+  --muted: #64748b;
+  --gold: #b45309;
+  --gold-dim: rgba(180, 83, 9, 0.35);
+  --ok: #059669;
+  --glow: 0 8px 32px rgba(15, 23, 42, 0.06);
+}
+
+body.royai-room-light .royai-bg {
+  background:
+    radial-gradient(ellipse 85% 55% at 15% 0%, rgba(14, 165, 233, 0.14), transparent 52%),
+    radial-gradient(ellipse 70% 45% at 100% 10%, rgba(245, 158, 11, 0.1), transparent 48%),
+    linear-gradient(180deg, var(--bg0), #f8fafc);
+}
+
+body.royai-room-light .royai-voice-prime {
+  background: rgba(248, 250, 252, 0.92);
+  border: 1px solid var(--line);
+}
+
+body.royai-room-light .royai-textarea {
+  background: #f8fafc;
+  color: var(--text);
+}
+
+body.royai-room-light .royai-mic {
+  background: radial-gradient(circle at 50% 28%, rgba(14, 165, 233, 0.18), rgba(255, 255, 255, 0.95));
+  border-color: rgba(14, 165, 233, 0.35);
+  color: var(--text);
+}
+
+body.royai-room-light .royai-mic.royai-mic--on {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.22);
+}
+
+body.royai-room-light .royai-quick button {
+  background: #f8fafc;
+  color: var(--text);
+}
+
+body.royai-room-light .royai-assistant {
+  color: #0c4a6e;
+}
+

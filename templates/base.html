@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>{% block title %}RoyAI{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/royai-base.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/royai-voice.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/royai-mascot.css') }}" />
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="royai-body {% block body_extra_class %}{% endblock %}">
+  <div class="royai-bg"></div>
+  <div class="royai-shell">
+    {% block body %}{% endblock %}
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

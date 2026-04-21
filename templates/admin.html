@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}RoyAI · 관제{% endblock %}
+{% block body %}
+<header class="royai-topbar">
+  <div class="royai-brand">관제</div>
+  <nav class="royai-nav">
+    <a href="/">대시보드</a>
+    <a href="/kitchen">주방</a>
+  </nav>
+</header>
+<main class="royai-main">
+  <h1 class="royai-h1">전체 룸</h1>
+  <div id="admin-rooms" class="royai-grid"></div>
+  <h2 class="royai-h2" style="margin-top:2rem">최근 이벤트</h2>
+  <ul id="admin-events" class="royai-log"></ul>
+</main>
+<script>
+const socket = io({ transports: ['websocket', 'polling'] });
+socket.on('connect', () => socket.emit('join_admin'));
+
+async function refreshRooms() {
+  const r = await fetch('/api/rooms');
+  const j = await r.json();
+  document.getElementById('admin-rooms').innerHTML = j.rooms.map(room => `
+    <article class="royai-card royai-card--${room.status}">
+      <div class="royai-card__head">
+        <h2>${room.display_name}</h2>
+        <span class="royai-pill royai-pill--${room.is_occupied ? 'on' : 'off'}">${room.status}</span>
+      </div>
+      <p class="royai-meta">세션 #${room.current_session_id ?? '—'}</p>
+    </article>
+  `).join('');
+}
+
+async function refreshEvents() {
+  const r = await fetch('/api/events/recent?limit=40');
+  const j = await r.json();
+  document.getElementById('admin-events').innerHTML = j.events.map(ev =>
+    `<li><span class="royai-tag">${ev.event_type}</span> ${JSON.stringify(ev.payload).slice(0,120)}…</li>`
+  ).join('') || '<li>로그 없음</li>';
+}
+
+socket.on('server_event', () => { refreshRooms(); refreshEvents(); });
+socket.on('room_status_updated', refreshRooms);
+refreshRooms(); refreshEvents();
+setInterval(refreshRooms, 5000);
+setInterval(refreshEvents, 5000);
+</script>
+{% endblock %}

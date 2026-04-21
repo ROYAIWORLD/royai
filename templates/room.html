@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+{% block title %}RoyAI · {{ room_id }}{% endblock %}
+{% block body_extra_class %}royai-room-light royai-room-full{% endblock %}
+{% block body %}
+<header class="royai-roombar">
+  <div>
+    <div class="royai-room-title">{{ room_id }}</div>
+    <div id="room-status" class="royai-room-status">…</div>
+  </div>
+  <a class="royai-btn royai-btn--ghost" href="/">나가기</a>
+</header>
+
+<main class="royai-room-main">
+  <div id="royai-voice-prime" class="royai-voice-prime royai-voice-prime--gone" role="button" tabindex="0" aria-label="마이크 허용 — 한 번만 누르기">
+    <div class="royai-voice-prime__inner">
+      <p class="royai-voice-prime__title">마이크 허용</p>
+      <p class="royai-voice-prime__lead">처음 한 번만 허용하면, 그다음부터는 "로이야"로 대화할 수 있어요.</p>
+      <p class="royai-muted royai-voice-prime__sub">화면을 한 번 탭하면 바로 듣기를 시작합니다.</p>
+    </div>
+  </div>
+
+  <section class="royai-mascot-board">
+    <p id="royai-voice-sig-caption" class="royai-mascot-caption">RoyAI</p>
+    <div id="royai-mascot-shell" class="royai-mascot-shell royai-mascot-shell--image" data-state="idle" aria-live="polite">
+      <div class="royai-mascot-aura" aria-hidden="true"></div>
+      <img
+        id="royai-mascot-image"
+        class="royai-mascot-image"
+        src="{{ url_for('static', filename='img/roy-mascot.png') }}"
+        alt="RoyAI 마스코트"
+      />
+      <div class="royai-mascot-led" aria-hidden="true"></div>
+      <div class="royai-mascot-bars" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <p id="assistant-out" class="royai-assistant royai-assistant--talk">로이야 라고 불러 주세요.</p>
+
+    <div class="royai-mascot-actions">
+      <button type="button" id="btn-voice" class="royai-btn">듣기 끄기 / 켜기</button>
+      <button type="button" id="btn-tts" class="royai-btn royai-btn--ghost">음성응답 ON</button>
+      <button type="button" id="btn-menu-toggle" class="royai-btn royai-btn--ghost">메뉴 보기</button>
+    </div>
+  </section>
+
+  <section id="royai-menu-overlay" class="royai-menu-overlay royai-menu-overlay--hidden" aria-hidden="true">
+    <div class="royai-menu-dialog">
+      <div class="royai-menu-dialog__head">
+        <h2 class="royai-h2">메뉴</h2>
+        <button type="button" id="btn-menu-close" class="royai-btn royai-btn--ghost">닫기</button>
+      </div>
+      <div id="menu-list" class="royai-menu"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const ROOM_ID = {{ room_id | tojson }};
+const outEl = () => document.getElementById('assistant-out');
+const ttsBtn = () => document.getElementById('btn-tts');
+const menuToggleBtn = () => document.getElementById('btn-menu-toggle');
+
+let ttsEnabled = true;
+let ttsActive = false;
+let voiceKeepListening = false;
+let voiceRec = null;
+let voiceDebounce = null;
+let voiceLastSent = '';
+let voiceLastSentAt = 0;
+let voiceAutoStartPending = false;
+let royErrorTimer = null;
+
+function setRoyState(state, caption) {
+  const el = document.getElementById('royai-mascot-shell');
+  const cap = document.getElementById('royai-voice-sig-caption');
+  if (!el) return;
+  el.dataset.state = state;
+  if (cap && caption != null) cap.textContent = caption;
+  if (royErrorTimer) {
+    clearTimeout(royErrorTimer);
+    royErrorTimer = null;
+  }
+  if (state === 'error') {
+    royErrorTimer = setTimeout(() => {
+      if (ttsActive) setRoyState('speaking', '로이가 말하는 중');
+      else if (voiceKeepListening) setRoyState('listening', '듣는 중');
+      else setRoyState('idle', 'RoyAI');
+    }, 1400);
+  }
+}
+
+function pickKoreanVoice() {
+  if (!('speechSynthesis' in window)) return null;
+  const voices = window.speechSynthesis.getVoices() || [];
+  return voices.find((v) => (v.lang || '').toLowerCase().startsWith('ko')) || null;
+}
+
+function speakReply(text) {
+  const raw = String(text || '').trim();
+  if (!raw || !ttsEnabled || !('speechSynthesis' in window)) {
+    if (voiceKeepListening && !ttsActive) setRoyState('listening', '듣는 중');
+    else if (!voiceKeepListening) setRoyState('idle', 'RoyAI');
+    return;
+  }
+  const speakText = raw.replace(/\(계속 듣는 중.*?\)/g, '').trim();
+  if (!speakText) return;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(speakText);
+    u.lang = 'ko-KR';
+    const v = pickKoreanVoice();
+    if (v) u.voice = v;
+    u.rate = 1.0;
+    u.pitch = 1.0;
+    u.onstart = () => {
+      ttsActive = true;
+      setRoyState('speaking', '로이가 말하는 중');
+    };
+    u.onend = () => {
+      ttsActive = false;
+      if (voiceKeepListening) setRoyState('listening', '듣는 중');
+      else setRoyState('idle', 'RoyAI');
+    };
+    u.onerror = () => {
+      ttsActive = false;
+      if (voiceKeepListening) setRoyState('listening', '듣는 중');
+      else setRoyState('idle', 'RoyAI');
+    };
+    window.speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+function menuOverlay() {
+  return document.getElementById('royai-menu-overlay');
+}
+
+function showMenuOverlay() {
+  const el = menuOverlay();
+  if (!el) return;
+  el.classList.remove('royai-menu-overlay--hidden');
+  el.setAttribute('aria-hidden', 'false');
+  if (menuToggleBtn()) menuToggleBtn().textContent = '메뉴 닫기';
+}
+
+function hideMenuOverlay() {
+  const el = menuOverlay();
+  if (!el) return;
+  el.classList.add('royai-menu-overlay--hidden');
+  el.setAttribute('aria-hidden', 'true');
+  if (menuToggleBtn()) menuToggleBtn().textContent = '메뉴 보기';
+}
+
+function handleAssistantIntent(intent) {
+  if (intent === 'show_menu') showMenuOverlay();
+  if (intent === 'hide_menu') hideMenuOverlay();
+}
+
+function showPrimeOverlay() {
+  const el = document.getElementById('royai-voice-prime');
+  if (el) el.classList.remove('royai-voice-prime--gone');
+}
+
+function hidePrimeOverlay() {
+  const el = document.getElementById('royai-voice-prime');
+  if (el) el.classList.add('royai-voice-prime--gone');
+}
+
+async function refreshRoom() {
+  try {
+    const r = await fetch('/api/rooms/' + encodeURIComponent(ROOM_ID));
+    const j = await r.json();
+    if (!j.room) return;
+    document.getElementById('room-status').textContent = j.room.status + ' · 점유 ' + (j.room.is_occupied ? '예' : '아니오');
+  } catch (e) {}
+}
+
+async function loadMenu() {
+  const r = await fetch('/api/menu');
+  const j = await r.json();
+  document.getElementById('menu-list').innerHTML = j.items.map(m =>
+    `<div class="royai-menu-row"><div><strong>${m.name}</strong><div class="royai-muted">${m.category} · ${m.price}원</div></div></div>`
+  ).join('');
+}
+
+function setMicListening(on) {
+  const btn = document.getElementById('btn-voice');
+  if (!btn) return;
+  btn.textContent = on ? '듣기 끄기' : '듣기 켜기';
+}
+
+function clearVoiceTimers() {
+  if (voiceDebounce) {
+    clearTimeout(voiceDebounce);
+    voiceDebounce = null;
+  }
+}
+
+async function sendVoiceToAssistant(text) {
+  const t = (text || '').trim();
+  if (!t) return;
+  const now = Date.now();
+  if (t === voiceLastSent && now - voiceLastSentAt < 2500) return;
+  voiceLastSent = t;
+  voiceLastSentAt = now;
+  if (!ttsActive) setRoyState('thinking', '생각 중');
+  outEl().textContent = '처리 중…';
+  try {
+    const r = await fetch('/api/assistant/voice-text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room_id: ROOM_ID, text: t }),
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      outEl().textContent = j.error || JSON.stringify(j);
+      setRoyState('error', '다시 한번 말씀해 주세요');
+      return;
+    }
+    outEl().textContent = j.reply != null ? j.reply : JSON.stringify(j);
+    handleAssistantIntent(j.intent || '');
+    speakReply(j.reply);
+  } catch (e) {
+    outEl().textContent = '전송 실패: 네트워크를 확인해 주세요.';
+    setRoyState('error', '연결 불안정');
+  }
+}
+
+function startListeningSession(SR) {
+  const rec = new SR();
+  voiceRec = rec;
+  rec.lang = 'ko-KR';
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+
+  rec.onstart = () => {
+    hidePrimeOverlay();
+    if (!ttsActive) setRoyState('listening', '듣는 중');
+    if (voiceAutoStartPending) {
+      outEl().textContent = '듣고 있습니다. "로이야"로 불러 주세요.';
+      voiceAutoStartPending = false;
+    }
+  };
+
+  rec.onresult = (ev) => {
+    let interim = '';
+    let finalChunk = '';
+    for (let i = 0; i < ev.results.length; i++) {
+      const r = ev.results[i];
+      const tx = r[0].transcript;
+      if (r.isFinal) finalChunk += tx;
+      else interim += tx;
+    }
+    const live = (finalChunk + interim).trim();
+    if (!ttsActive && live) setRoyState('listening', '집중해서 듣는 중');
+    clearTimeout(voiceDebounce);
+
+    if (finalChunk.trim()) {
+      sendVoiceToAssistant(finalChunk.trim());
+      return;
+    }
+    if (live) {
+      voiceDebounce = setTimeout(() => {
+        if (!voiceKeepListening) return;
+        sendVoiceToAssistant(live);
+      }, 850);
+    }
+  };
+
+  rec.onerror = (ev) => {
+    if (ev.error === 'no-speech' || ev.error === 'aborted') return;
+    if (ev.error === 'not-allowed') {
+      voiceAutoStartPending = false;
+      voiceKeepListening = false;
+      setMicListening(false);
+      showPrimeOverlay();
+      setRoyState('error', '마이크 권한 필요');
+      outEl().textContent = '마이크 권한이 필요해요. 화면을 탭해 주세요.';
+      return;
+    }
+    voiceAutoStartPending = false;
+    setRoyState('error', '다시 한번 말씀해 주세요');
+    outEl().textContent = '음성 인식 오류: ' + ev.error;
+  };
+
+  rec.onend = () => {
+    if (!voiceKeepListening) return;
+    setTimeout(() => {
+      try {
+        rec.start();
+      } catch (e) {
+        voiceKeepListening = false;
+        setMicListening(false);
+        setRoyState('idle', 'RoyAI');
+        outEl().textContent = '듣기를 다시 켜 주세요.';
+      }
+    }, 400);
+  };
+
+  try {
+    rec.start();
+  } catch (e) {
+    voiceAutoStartPending = false;
+    voiceKeepListening = false;
+    setMicListening(false);
+    showPrimeOverlay();
+    setRoyState('error', '마이크 권한 필요');
+    outEl().textContent = '음성 시작이 차단되었습니다. 화면을 탭해 허용해 주세요.';
+  }
+}
+
+function enableVoiceListening() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    outEl().textContent = '이 브라우저는 음성 인식을 지원하지 않습니다.';
+    return false;
+  }
+  if (voiceKeepListening) return true;
+  voiceKeepListening = true;
+  setMicListening(true);
+  if (!ttsActive) setRoyState('listening', '듣는 중');
+  outEl().textContent = '듣는 중입니다. "로이야"로 시작해서 말씀해 주세요.';
+  startListeningSession(SR);
+  return true;
+}
+
+function disableVoiceListening() {
+  if (!voiceKeepListening) return;
+  voiceAutoStartPending = false;
+  voiceKeepListening = false;
+  clearVoiceTimers();
+  try {
+    if (voiceRec) voiceRec.stop();
+  } catch (e) {}
+  voiceRec = null;
+  setMicListening(false);
+  setRoyState('idle', 'RoyAI');
+  outEl().textContent = '대기 중입니다.';
+}
+
+function attemptAutoStartVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  voiceAutoStartPending = true;
+  hidePrimeOverlay();
+  enableVoiceListening();
+}
+
+let socket = null;
+if (typeof io !== 'undefined') {
+  socket = io({ path: '/socket.io/', transports: ['websocket', 'polling'] });
+  socket.on('connect', () => {
+    socket.emit('join_room_channel', { room_id: ROOM_ID });
+  });
+  socket.on('assistant_reply', (p) => {
+    if (p.room_id !== ROOM_ID) return;
+    outEl().textContent = p.reply || '';
+    handleAssistantIntent(p.intent || '');
+  });
+}
+
+const primeEl = document.getElementById('royai-voice-prime');
+if (primeEl) {
+  primeEl.addEventListener('click', (e) => {
+    e.preventDefault();
+    hidePrimeOverlay();
+    enableVoiceListening();
+  });
+  primeEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      hidePrimeOverlay();
+      enableVoiceListening();
+    }
+  });
+}
+
+document.getElementById('btn-voice').addEventListener('click', () => {
+  if (voiceKeepListening) disableVoiceListening();
+  else enableVoiceListening();
+});
+
+document.getElementById('btn-tts').addEventListener('click', () => {
+  ttsEnabled = !ttsEnabled;
+  ttsBtn().textContent = ttsEnabled ? '음성응답 ON' : '음성응답 OFF';
+  if (!ttsEnabled && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
+  }
+});
+
+document.getElementById('btn-menu-toggle').addEventListener('click', () => {
+  const el = menuOverlay();
+  if (!el) return;
+  if (el.classList.contains('royai-menu-overlay--hidden')) showMenuOverlay();
+  else hideMenuOverlay();
+});
+
+document.getElementById('btn-menu-close').addEventListener('click', () => {
+  hideMenuOverlay();
+});
+
+setRoyState('idle', 'RoyAI');
+setTimeout(() => {
+  attemptAutoStartVoice();
+}, 200);
+
+refreshRoom();
+loadMenu();
+setInterval(refreshRoom, 6000);
+</script>
+{% endblock %}
