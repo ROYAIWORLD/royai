@@ -1,0 +1,15 @@
+RoyAI_Platform (9120) — 문서 루트: /Services
+
+  cd /Services/RoyAI_Platform
+  python3 -m venv venv
+  source venv/bin/activate
+  pip install -r requirements.txt
+
+개발 (0.0.0.0):
+  BIND=0.0.0.0 PORT=9120 python run_server.py
+
+프로덕션 (roy, 로컬 바인딩 + Apache TLS):
+  sudo -u roy /Services/RoyAI_Platform/start_royai_platform.sh
+
+Apache WebSocket:
+  /Services/deploy/apache-royai-reverse-proxy.conf 참고

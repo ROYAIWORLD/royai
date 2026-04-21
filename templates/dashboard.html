@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}RoyAI · 운영 대시보드{% endblock %}
+{% block body %}
+<header class="royai-topbar">
+  <div class="royai-brand">RoyAI <span class="royai-sub">다이닝 자동화 MVP</span></div>
+  <nav class="royai-nav">
+    <a href="/kitchen">주방</a>
+    <a href="/admin">관제</a>
+  </nav>
+</header>
+<main class="royai-main">
+  <h1 class="royai-h1">룸 현황</h1>
+  <p class="royai-lead">룸 화면은 <code class="royai-code">/room/&lt;id&gt;</code> 또는 <code class="royai-code">/?room=room1</code></p>
+  <div id="room-cards" class="royai-grid"></div>
+</main>
+<script>
+async function load() {
+  const r = await fetch('/api/rooms');
+  const j = await r.json();
+  const el = document.getElementById('room-cards');
+  el.innerHTML = j.rooms.map(room => `
+    <article class="royai-card">
+      <div class="royai-card__head">
+        <h2>${room.display_name}</h2>
+        <span class="royai-pill royai-pill--${room.is_occupied ? 'on' : 'off'}">${room.is_occupied ? '사용중' : '비어있음'}</span>
+      </div>
+      <p class="royai-meta">상태 · <strong>${room.status}</strong></p>
+      <a class="royai-btn" href="/room/${room.id}">룸 화면</a>
+    </article>
+  `).join('');
+}
+load();
+setInterval(load, 8000);
+</script>
+{% endblock %}

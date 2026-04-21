@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>RoyAI · Watch</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/neumorphic.css') }}" />
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+  <style>
+    .watch-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; }
+    .watch-bezel {
+      width: min(100%, 400px);
+      border-radius: 48px;
+      padding: 1.35rem;
+      background: var(--nm-bg);
+      box-shadow: 12px 12px 36px var(--nm-d), -10px -10px 32px var(--nm-l);
+    }
+    .watch-screen {
+      border-radius: 36px;
+      min-height: 280px;
+      padding: 2rem 1.5rem;
+      background: var(--nm-bg-elev);
+      box-shadow: inset 8px 8px 20px var(--nm-d), inset -6px -6px 16px var(--nm-l);
+      text-align: center;
+    }
+    .watch-screen h2 { margin: 0 0 0.5rem; font-size: 1.15rem; font-weight: 800; letter-spacing: -0.03em; }
+    .watch-screen p { margin: 0; font-size: 0.88rem; color: var(--nm-muted); font-weight: 500; line-height: 1.55; }
+    .pulse {
+      width: 12px; height: 12px; border-radius: 50%; margin: 1.5rem auto 0;
+      background: var(--nm-point);
+      opacity: 0.85;
+      animation: pulse-ring 2.2s ease-out infinite;
+    }
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(92, 107, 192, 0.45); }
+      70% { box-shadow: 0 0 0 18px rgba(92, 107, 192, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(92, 107, 192, 0); }
+    }
+    .overlay {
+      position: fixed; inset: 0; z-index: 100;
+      display: none; align-items: center; justify-content: center;
+      padding: 1.25rem;
+      background: rgba(240, 243, 246, 0.92);
+      backdrop-filter: blur(10px);
+    }
+    .overlay.open { display: flex; }
+    .overlay-card {
+      width: min(100%, 400px);
+      padding: 2.25rem 1.75rem;
+      border-radius: var(--nm-r-lg);
+      text-align: center;
+      background: var(--nm-bg);
+      box-shadow: 14px 14px 36px var(--nm-d), -10px -10px 28px var(--nm-l);
+      animation: pop-in 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @keyframes pop-in {
+      from { opacity: 0; transform: scale(0.94); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .overlay-title { margin: 0 0 0.5rem; font-size: clamp(1.75rem, 8vw, 2.5rem); font-weight: 900; letter-spacing: -0.04em; color: var(--nm-point); }
+    .overlay-sub { margin: 0 0 1.75rem; font-size: 0.95rem; color: var(--nm-muted); font-weight: 500; line-height: 1.5; }
+    @media (prefers-reduced-motion: reduce) {
+      .pulse { animation: none; }
+      .overlay-card { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="watch-page">
+    <div class="watch-bezel">
+      <div class="watch-screen">
+        <h2>대기 중</h2>
+        <p>새 주문이 도착하면 전체 화면으로 알립니다.</p>
+        <div class="pulse" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" role="alertdialog" aria-modal="true" aria-labelledby="ovTitle">
+    <div class="overlay-card nm-press">
+      <p class="overlay-title" id="ovTitle">주문</p>
+      <p class="overlay-sub" id="ovSub"></p>
+      <button type="button" class="btn-round btn-watch nm-press" id="confirmBtn">확인</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var overlay = document.getElementById("overlay");
+      var ovTitle = document.getElementById("ovTitle");
+      var ovSub = document.getElementById("ovSub");
+      var confirmBtn = document.getElementById("confirmBtn");
+      var current = null;
+      var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      function buzz() {
+        if (reduced || !navigator.vibrate) return;
+        try { navigator.vibrate([120, 50, 120, 50, 160]); } catch (e) {}
+      }
+
+      var socket = io({ path: "/socket.io/", transports: ["websocket", "polling"] });
+
+      socket.on("new_order", function (data) {
+        if (!data || !data.item) return;
+        current = { order_id: data.order_id, item: data.item, message: data.message || "" };
+        ovTitle.textContent = data.item + " 주문";
+        ovSub.textContent = data.message ? "「" + data.message + "」" : "신규 접수";
+        overlay.classList.add("open");
+        buzz();
+      });
+
+      confirmBtn.addEventListener("click", function () {
+        if (current) socket.emit("order_confirmed", { order_id: current.order_id, item: current.item });
+        current = null;
+        overlay.classList.remove("open");
+      });
+    })();
+  </script>
+</body>
+</html>

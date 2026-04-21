@@ -1,0 +1,232 @@
+/* —— 룸: 음성 시그니처 (듣기 vs 로이 응답) —— */
+.royai-voice-sig {
+  --sig-in: #0ea5e9;
+  --sig-out: #d97706;
+  --sig-core: #38bdf8;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.88));
+  border: 1px solid var(--line);
+  border-radius: 1.15rem;
+  padding: 1rem 1.1rem 1.15rem;
+  box-shadow: var(--glow);
+}
+
+.royai-voice-sig__caption {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+}
+
+.royai-voice-sig__stage {
+  position: relative;
+  height: 7.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.06), rgba(217, 119, 6, 0.04));
+}
+
+.royai-voice-sig__core {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, var(--sig-core) 45%, #0284c7);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset,
+    0 8px 24px rgba(14, 165, 233, 0.25);
+  z-index: 2;
+  opacity: 0.85;
+  transform: scale(1);
+  transition: transform 0.35s ease, box-shadow 0.35s ease, opacity 0.35s ease;
+}
+
+.royai-voice-sig__bars {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 3.5rem;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.royai-voice-sig__bars span {
+  width: 5px;
+  height: 18%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--sig-in), #0369a1);
+  transform-origin: center bottom;
+  animation: royai-sig-bar-idle 0.8s ease-in-out infinite;
+}
+
+.royai-voice-sig__bars span:nth-child(1) {
+  animation-delay: 0s;
+}
+.royai-voice-sig__bars span:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.royai-voice-sig__bars span:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.royai-voice-sig__bars span:nth-child(4) {
+  animation-delay: 0.24s;
+}
+.royai-voice-sig__bars span:nth-child(5) {
+  animation-delay: 0.32s;
+}
+.royai-voice-sig__bars span:nth-child(6) {
+  animation-delay: 0.4s;
+}
+.royai-voice-sig__bars span:nth-child(7) {
+  animation-delay: 0.48s;
+}
+
+@keyframes royai-sig-bar-idle {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.royai-voice-sig__rings {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.royai-voice-sig__ring {
+  position: absolute;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 2px solid var(--sig-out);
+  opacity: 0;
+  animation: royai-sig-ring 2.2s ease-out infinite;
+}
+
+.royai-voice-sig__ring:nth-child(2) {
+  animation-delay: 0.45s;
+}
+.royai-voice-sig__ring:nth-child(3) {
+  animation-delay: 0.9s;
+}
+
+@keyframes royai-sig-ring {
+  0% {
+    transform: scale(0.65);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* 듣기: 막대 파동 */
+.royai-voice-sig[data-state="listening"] .royai-voice-sig__caption {
+  color: #0369a1;
+}
+
+.royai-voice-sig[data-state="listening"] .royai-voice-sig__bars {
+  opacity: 1;
+}
+
+.royai-voice-sig[data-state="listening"] .royai-voice-sig__bars span {
+  animation-name: royai-sig-bar-listen;
+  animation-duration: 0.55s;
+}
+
+@keyframes royai-sig-bar-listen {
+  0%,
+  100% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(1.15);
+  }
+}
+
+.royai-voice-sig[data-state="listening"] .royai-voice-sig__core {
+  transform: scale(0.92);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.45) inset,
+    0 0 0 8px rgba(14, 165, 233, 0.12);
+}
+
+/* 로이 응답(TTS): 확장 링 */
+.royai-voice-sig[data-state="speaking"] .royai-voice-sig__caption {
+  color: #b45309;
+}
+
+.royai-voice-sig[data-state="speaking"] .royai-voice-sig__rings {
+  opacity: 1;
+}
+
+.royai-voice-sig[data-state="speaking"] .royai-voice-sig__ring {
+  border-color: rgba(217, 119, 6, 0.85);
+  animation-duration: 1.85s;
+}
+
+.royai-voice-sig[data-state="speaking"] .royai-voice-sig__core {
+  transform: scale(1.06);
+  background: radial-gradient(circle at 35% 30%, #fff, #fbbf24 40%, #d97706);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.55) inset,
+    0 8px 28px rgba(217, 119, 6, 0.35);
+}
+
+/* 대기 */
+.royai-voice-sig[data-state="idle"] .royai-voice-sig__core {
+  animation: royai-sig-core-idle 3.5s ease-in-out infinite;
+}
+
+@keyframes royai-sig-core-idle {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.88;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .royai-voice-sig__bars span,
+  .royai-voice-sig__ring,
+  .royai-voice-sig[data-state="idle"] .royai-voice-sig__core {
+    animation: none !important;
+  }
+
+  .royai-voice-sig[data-state="listening"] .royai-voice-sig__bars span {
+    transform: scaleY(0.75);
+  }
+
+  .royai-voice-sig[data-state="speaking"] .royai-voice-sig__ring {
+    opacity: 0.2;
+    transform: scale(1.4);
+  }
+}
+

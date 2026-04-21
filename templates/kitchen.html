@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}RoyAI · 주방{% endblock %}
+{% block body %}
+<header class="royai-topbar">
+  <div class="royai-brand">주방 큐</div>
+  <nav class="royai-nav">
+    <a href="/">대시보드</a>
+    <a href="/admin">관제</a>
+  </nav>
+</header>
+<main class="royai-kitchen">
+  <div class="royai-kcol" id="col-new"><h2 class="royai-h2">신규</h2><div class="royai-klist" id="list-new"></div></div>
+  <div class="royai-kcol" id="col-cook"><h2 class="royai-h2">조리중</h2><div class="royai-klist" id="list-cook"></div></div>
+  <div class="royai-kcol" id="col-ready"><h2 class="royai-h2">완료</h2><div class="royai-klist" id="list-ready"></div></div>
+</main>
+<script>
+const socket = io({ transports: ['websocket', 'polling'] });
+socket.on('connect', () => socket.emit('join_kitchen'));
+
+function bucket(st) {
+  if (['created', 'accepted', 'queued'].includes(st)) return 'new';
+  if (st === 'cooking') return 'cook';
+  if (['ready', 'served', 'done'].includes(st)) return 'ready';
+  return 'new';
+}
+
+function card(o) {
+  const items = o.items.map(i => `${i.name_snapshot}×${i.qty}`).join(', ');
+  const actions = [];
+  if (o.status === 'created') actions.push(`<button data-act="accepted" data-id="${o.id}">접수</button>`);
+  if (o.status === 'accepted') actions.push(`<button data-act="queued" data-id="${o.id}">대기열</button>`);
+  if (o.status === 'queued') actions.push(`<button data-act="cooking" data-id="${o.id}">조리시작</button>`);
+  if (o.status === 'cooking') actions.push(`<button data-act="ready" data-id="${o.id}">조리완료</button>`);
+  if (o.status === 'ready') actions.push(`<button data-act="served" data-id="${o.id}">서빙</button>`);
+  if (o.status === 'served') actions.push(`<button data-act="done" data-id="${o.id}">정산완료</button>`);
+  return `<article class="royai-kcard ${o.status === 'created' ? 'royai-kcard--new' : ''}">
+    <div class="royai-kcard__top"><span class="royai-tag">${o.status}</span><strong>${o.room_id}</strong></div>
+    <div class="royai-kcard__body">#${o.id}<br/>${items}</div>
+    <div class="royai-kcard__actions">${actions.join(' ')}</div>
+  </article>`;
+}
+
+async function refresh() {
+  const r = await fetch('/api/orders');
+  const j = await r.json();
+  const lists = { new: [], cook: [], ready: [] };
+  for (const o of j.orders) {
+    lists[bucket(o.status)].push(card(o));
+  }
+  document.getElementById('list-new').innerHTML = lists.new.join('') || '<p class="royai-muted">없음</p>';
+  document.getElementById('list-cook').innerHTML = lists.cook.join('') || '<p class="royai-muted">없음</p>';
+  document.getElementById('list-ready').innerHTML = lists.ready.join('') || '<p class="royai-muted">없음</p>';
+}
+
+document.querySelector('.royai-kitchen').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const id = btn.getAttribute('data-id');
+  const st = btn.getAttribute('data-act');
+  await fetch('/api/orders/' + id + '/status', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: st }),
+  });
+  refresh();
+});
+
+socket.on('kitchen_queue_updated', refresh);
+socket.on('order_created', refresh);
+socket.on('order_updated', refresh);
+refresh();
+setInterval(refresh, 7000);
+</script>
+{% endblock %}
